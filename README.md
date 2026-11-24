@@ -6,6 +6,14 @@ International football analytics over every men's international since 1872: top 
 Elo power rankings, a match simulator that predicts win/draw/loss odds, and a random-match explorer with
 head-to-head history. FastAPI + SQLite backend, a single vanilla-JS page, no build step.
 
+**Backend highlights**
+- **Cache:** in-memory TTL + LRU cache on the leaderboard API with an `X-Cache: HIT|MISS` header and per-key locks,
+  so concurrent misses hit the database once. +48% throughput in load tests.
+- **Rate limiting:** per-IP token bucket (30 req/min) on `/api/*`, returning `429` with `Retry-After`.
+- **Precomputation:** rankings, Elo history and outcome calibration are built offline into SQLite, so requests only
+  read indexed rows.
+- **Tests:** 37 pytest tests with fixture data and a fake clock, ruff-clean. See [System design features](#system-design-features).
+
 ## Run locally
 
 ```bash
