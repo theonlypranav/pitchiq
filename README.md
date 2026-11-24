@@ -1,5 +1,7 @@
 # PitchIQ
 
+**Live:** https://pitchiq-u7va.onrender.com (free instance: the first load after idle takes ~30 s)
+
 International football analytics over every men's international since 1872: top scorers, team records,
 Elo power rankings, a match simulator that predicts win/draw/loss odds, and a random-match explorer with
 head-to-head history. FastAPI + SQLite backend, a single vanilla-JS page, no build step.
