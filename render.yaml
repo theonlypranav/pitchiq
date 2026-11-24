@@ -9,3 +9,7 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.4
+      - key: CACHE_TTL_SECONDS
+        value: "86400"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "30"

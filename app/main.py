@@ -1,24 +1,60 @@
 """FastAPI app: routes and middleware wiring."""
 
+import logging
+import math
 import threading
+import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from app import db, simulator
 from app import elo as elo_lib
-from app.config import ERAS, Settings, load_settings
+from app.cache import TTLCache
+from app.config import CACHE_MAX_ENTRIES, ERAS, Settings, load_settings
+from app.rate_limit import RateLimiter, client_ip
 from app.teams import summarize
 
 STATIC_DIR = Path(__file__).parent / "static"
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+log = logging.getLogger("pitchiq.request")
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+
+def create_app(
+    settings: Settings | None = None, clock: Callable[[], float] = time.monotonic
+) -> FastAPI:
+    """`clock` drives cache expiry and token refill; tests pass a fake one."""
     settings = settings or load_settings()
     app = FastAPI(title="PitchIQ API")
     app.state.settings = settings
+    cache = TTLCache(CACHE_MAX_ENTRIES, settings.cache_ttl_seconds, clock)
+    limiter = (
+        RateLimiter(settings.rate_limit_per_minute, clock)
+        if settings.rate_limit_per_minute > 0 else None
+    )
+    app.state.cache = cache
+
+    @app.middleware("http")
+    async def rate_limit_and_log(request: Request, call_next: Callable) -> Any:
+        started = time.perf_counter()
+        path = request.url.path
+        if limiter and path.startswith("/api/") and path != "/api/health":
+            wait = limiter.check(client_ip(request))
+            if wait > 0:
+                response = JSONResponse(
+                    {"error": "rate limit exceeded"},
+                    status_code=429,
+                    headers={"Retry-After": str(math.ceil(wait))},
+                )
+                _log(request, response, started)
+                return response
+        response = await call_next(request)
+        _log(request, response, started)
+        return response
 
     if not Path(settings.db_path).exists():
         raise RuntimeError(
@@ -52,9 +88,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> dict[str, Any] | JSONResponse:
         if era not in ERAS:
             return error(400, "invalid era", valid=list(ERAS))
-        with conn_lock:
-            items = db.get_scorers(conn, era, limit, offset)
-        return {"era": era, "data_version": data_version, "items": items}
+
+        def load() -> dict[str, Any]:
+            with conn_lock:
+                items = db.get_scorers(conn, era, limit, offset)
+            return {"era": era, "data_version": data_version, "items": items}
+
+        # data_version in the key: a rebuilt database never serves stale entries.
+        body, hit = cache.get_or_load(f"scorers:{data_version}:{era}:{limit}:{offset}", load)
+        return JSONResponse(body, headers={"X-Cache": "HIT" if hit else "MISS"})
+
+    @app.get("/api/cache/stats")
+    def cache_stats() -> dict[str, Any]:
+        return cache.stats()
 
     @app.get("/api/players/search", response_model=None)
     def search(
@@ -255,6 +301,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
 
     return app
+
+
+def _log(request: Request, response: Any, started: float) -> None:
+    log.info(
+        "%s %s %d %.1fms cache=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        (time.perf_counter() - started) * 1000,
+        response.headers.get("X-Cache", "-"),
+    )
 
 
 app = create_app()

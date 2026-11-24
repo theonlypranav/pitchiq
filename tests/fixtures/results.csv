@@ -1,0 +1,7 @@
+date,home_team,away_team,home_score,away_score,tournament,city,country,neutral
+1949-05-05,Alpha,Gamma,1,0,Friendly,A City,Alpha,FALSE
+1998-06-10,Alpha,Beta,3,1,FIFA World Cup,Paris,France,TRUE
+2000-01-05,Beta,Gamma,1,2,Friendly,B City,Beta,FALSE
+2001-03-03,Gamma,Alpha,1,1,Copa América,C City,Gamma,FALSE
+2002-07-07,Old Delta,Alpha,0,2,Friendly,D City,Delta,FALSE
+2003-08-08,Delta,Beta,2,2,FIFA World Cup qualification,D City,Delta,FALSE

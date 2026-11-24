@@ -1,0 +1,10 @@
+date,home_team,away_team,team,scorer,minute,own_goal,penalty
+1949-05-05,Alpha,Gamma,Alpha,Old Timer,5,FALSE,FALSE
+1998-06-10,Alpha,Beta,Alpha,Ann Ace,10,FALSE,FALSE
+1998-06-10,Alpha,Beta,Alpha,Ann Ace,20,FALSE,TRUE
+1998-06-10,Alpha,Beta,Beta,Bob Bolt,30,FALSE,FALSE
+1998-06-10,Alpha,Beta,Alpha,Bob Bolt,40,TRUE,FALSE
+2000-01-05,Beta,Gamma,Beta,Bob Bolt,15,FALSE,FALSE
+2000-01-05,Beta,Gamma,Gamma,José Núñez,50,FALSE,FALSE
+2000-01-05,Beta,Gamma,Gamma,José Núñez,60,FALSE,FALSE
+2001-03-03,Gamma,Alpha,Gamma,,70,FALSE,FALSE
