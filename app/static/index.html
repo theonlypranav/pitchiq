@@ -1,0 +1,1639 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>PitchIQ</title>
+  <style>
+    :root {
+      --bg: #070a08;
+      --panel: #0f1411;
+      --panel-2: #151b17;
+      --panel-3: #1b231e;
+      --border: #1f2a23;
+      --text: #e9efe9;
+      --muted: #84918a;
+      --faint: #56625b;
+      --accent: #a6ff4d;
+      --accent-ink: #0b1205;
+      --accent-soft: rgba(166, 255, 77, 0.12);
+      --accent-line: rgba(166, 255, 77, 0.35);
+      --danger: #ff6b6b;
+      --radius: 14px;
+      --sidebar: 232px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background:
+        radial-gradient(900px 500px at 70% -10%, rgba(166, 255, 77, 0.07), transparent 60%),
+        radial-gradient(700px 400px at 0% 100%, rgba(166, 255, 77, 0.04), transparent 60%),
+        var(--bg);
+      background-attachment: fixed;
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    button, input, select { font: inherit; color: inherit; }
+    .num { font-variant-numeric: tabular-nums; }
+    [hidden] { display: none !important; }
+
+    /* ---------- Shell ---------- */
+    .shell { display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); min-height: 100vh; }
+    aside.sidebar {
+      position: sticky; top: 0; height: 100vh; padding: 20px 14px;
+      border-right: 1px solid var(--border); background: rgba(10, 14, 11, 0.7);
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px; font-weight: 750;
+            letter-spacing: 0.08em; font-size: 0.95rem; }
+    .logo-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent);
+                 display: grid; place-items: center; box-shadow: 0 0 18px rgba(166, 255, 77, 0.45); }
+    .logo-mark svg { width: 18px; height: 18px; }
+    .logo b { color: var(--accent); }
+    nav.menu { display: flex; flex-direction: column; gap: 2px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px;
+      color: var(--muted); text-decoration: none; font-weight: 550; border: 1px solid transparent;
+    }
+    .nav-item svg { width: 18px; height: 18px; flex: none; }
+    .nav-item:hover { color: var(--text); background: var(--panel-2); }
+    .nav-item.active { color: var(--text); background: var(--panel-3); border-color: var(--border); }
+    .nav-item.active svg { color: var(--accent); }
+    .promo {
+      margin-top: auto; border-radius: var(--radius); padding: 16px; border: 1px solid var(--border);
+      background: radial-gradient(160px 120px at 50% 85%, rgba(166, 255, 77, 0.28), transparent 70%), var(--panel);
+    }
+    .promo h3 { margin: 0 0 4px; font-size: 1rem; }
+    .promo p { margin: 0; color: var(--muted); font-size: 0.8rem; }
+    .promo .ball { display: block; width: 84px; height: 84px; margin: 14px auto;
+                   filter: drop-shadow(0 0 16px rgba(166, 255, 77, 0.5)); }
+
+    .content { min-width: 0; padding: 18px 24px 40px; }
+    .topbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+    .who { display: flex; align-items: center; gap: 10px; margin-right: 8px; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+              background: var(--panel-3); border: 1px solid var(--border); color: var(--accent);
+              font-weight: 700; font-size: 0.8rem; }
+    .who h1 { margin: 0; font-size: 1rem; font-weight: 650; }
+    .who small { color: var(--muted); font-size: 0.75rem; }
+    .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 10px;
+            background: var(--panel); border: 1px solid var(--border); font-size: 0.8rem; }
+    .pill .label { color: var(--muted); }
+    .pill .value { font-weight: 650; }
+    .spacer { flex: 1; }
+    .chip-version { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--muted);
+                    padding: 6px 10px; border-radius: 10px; border: 1px solid var(--border); }
+    .btn {
+      border: 1px solid var(--border); background: var(--panel-2); border-radius: 10px;
+      padding: 9px 14px; font-weight: 600; cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn:hover { border-color: var(--accent-line); }
+    .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+                   box-shadow: 0 0 20px rgba(166, 255, 77, 0.25); }
+    .btn.primary:hover { filter: brightness(1.06); }
+    .btn.block { width: 100%; }
+
+    /* ---------- Cards ---------- */
+    .grid { display: grid; gap: 14px; }
+    .grid.top { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+    .grid.bottom { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 14px; }
+    .card { background: linear-gradient(180deg, var(--panel-2), var(--panel));
+            border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; min-width: 0; }
+    .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .card-head h2 { margin: 0; font-size: 0.95rem; font-weight: 650; }
+    .card-head .sub { color: var(--muted); font-size: 0.78rem; }
+    .card-head .end { margin-left: auto; }
+    .link { color: var(--accent); text-decoration: none; font-size: 0.8rem; font-weight: 600; }
+
+    select, input[type="search"], input[type="text"], input:not([type]) {
+      width: 100%; min-width: 0; background: var(--panel-3); border: 1px solid var(--border);
+      border-radius: 10px; padding: 9px 11px;
+    }
+    select.compact { width: auto; padding: 6px 10px; font-size: 0.8rem; }
+    input::placeholder { color: var(--faint); }
+    select:focus, input:focus, .btn:focus-visible {
+      outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    label.field { display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: var(--muted); min-width: 0; }
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+
+    /* Big number + chart */
+    .big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 2px 0 6px; }
+    .big .value { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+    .delta { font-size: 0.75rem; font-weight: 650; color: var(--accent); background: var(--accent-soft);
+             padding: 3px 8px; border-radius: 999px; }
+    .chart { position: relative; height: 260px; }
+    .chart svg { width: 100%; height: 100%; display: block; overflow: visible; }
+    .chart .axis { fill: var(--faint); font-size: 10px; }
+    .chart .gridline { stroke: var(--border); stroke-dasharray: 3 4; }
+    .tooltip {
+      position: absolute; transform: translate(-50%, -130%); pointer-events: none;
+      background: var(--panel-3); border: 1px solid var(--accent-line); border-radius: 8px;
+      padding: 5px 9px; font-size: 0.75rem; white-space: nowrap; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    }
+    .tooltip b { color: var(--accent); }
+
+    /* Quick sim result boxes */
+    .result-boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .result-box { background: var(--panel-3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+    .result-box .label { color: var(--muted); font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .result-box .value { font-size: 1.35rem; font-weight: 700; }
+    .result-box.win { border-color: var(--accent-line); }
+    .result-box.win .value { color: var(--accent); }
+    .muted { color: var(--muted); }
+    .small { font-size: 0.78rem; }
+    .center { text-align: center; }
+
+    /* Lists */
+    .list { display: flex; flex-direction: column; }
+    .row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); min-width: 0; }
+    .row:last-child { border-bottom: 0; }
+    .row .grow { flex: 1; min-width: 0; }
+    .row .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row .meta { color: var(--muted); font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .badge { width: 30px; height: 30px; border-radius: 8px; flex: none; display: grid; place-items: center;
+             background: var(--panel-3); border: 1px solid var(--border); font-size: 0.68rem; font-weight: 700; color: var(--muted); }
+    .badge.hot { color: var(--accent); border-color: var(--accent-line); }
+    .score-chip { font-weight: 700; padding: 3px 8px; border-radius: 7px; background: var(--panel-3); white-space: nowrap; }
+    .up { color: var(--accent); } .down { color: var(--danger); }
+    .right { text-align: right; }
+
+    /* Tables */
+    .table-wrap { overflow: hidden; border-radius: 10px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: left; }
+    th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+         background: var(--panel-3); font-weight: 600; }
+    td { border-top: 1px solid var(--border); }
+    tbody tr:hover td { background: var(--panel-2); }
+    td.player { font-weight: 600; word-break: break-word; }
+    td.team { color: var(--muted); word-break: break-word; }
+    td.goals { color: var(--accent); font-weight: 700; }
+    th.n, td.n { text-align: right; font-variant-numeric: tabular-nums; }
+    tr.top td.rank { color: var(--accent); font-weight: 700; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    .controls > * { flex: 1 1 180px; }
+    .controls select { flex: 0 1 180px; }
+    .empty { color: var(--muted); padding: 22px 12px; text-align: center; }
+    .error { color: var(--danger); background: rgba(255, 107, 107, 0.08); border: 1px solid rgba(255, 107, 107, 0.3);
+             border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+
+    /* Teams */
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .stat { background: var(--panel-3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+    .stat .label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat .value { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .stat.accent .value { color: var(--accent); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .chip { font-size: 0.75rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+    .match { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: center;
+             padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .match:last-child { border-bottom: 0; }
+    .match .side { word-break: break-word; }
+    .match .side.away { text-align: right; }
+    .match .side.win { color: var(--accent); font-weight: 650; }
+    .match .info { grid-column: 1 / -1; color: var(--muted); font-size: 0.75rem; margin-top: -4px; }
+
+    /* Simulator */
+    .sim-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 170px auto; gap: 10px; align-items: end; }
+    .versus { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; margin-bottom: 14px; }
+    .versus .name { font-size: 1.25rem; font-weight: 700; word-break: break-word; }
+    .versus .name.b { text-align: right; }
+    .versus .rank { color: var(--muted); font-size: 0.78rem; }
+    .predicted { text-align: center; }
+    .predicted .score { font-size: 2.2rem; font-weight: 800; letter-spacing: 0.02em; color: var(--accent);
+                        text-shadow: 0 0 24px rgba(166, 255, 77, 0.35); }
+    .prob-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: var(--panel-3); margin: 8px 0 6px; }
+    .prob-bar span { display: block; height: 100%; }
+    .prob-bar .pa { background: var(--accent); }
+    .prob-bar .pd { background: #4c5a51; }
+    .prob-bar .pb { background: #d7e4da; }
+    .prob-legend { display: flex; justify-content: space-between; gap: 8px; font-size: 0.78rem; color: var(--muted); }
+    .prob-legend b { color: var(--text); }
+    .compare-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) 64px; gap: 10px; align-items: center; padding: 8px 0;
+                   border-bottom: 1px solid var(--border); }
+    .compare-row:last-child { border-bottom: 0; }
+    .compare-row .v { font-weight: 650; font-variant-numeric: tabular-nums; }
+    .compare-row .v.b { text-align: right; }
+    .compare-row .v.lead { color: var(--accent); }
+    .compare-row .mid { text-align: center; }
+    .compare-row .mid .label { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+    .dual { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; height: 6px; }
+    .dual .l, .dual .r { background: var(--panel-3); border-radius: 999px; overflow: hidden; display: flex; }
+    .dual .l { justify-content: flex-end; }
+    .dual i { display: block; height: 100%; background: #56645b; border-radius: 999px; }
+    .dual i.lead { background: var(--accent); }
+    .form { display: flex; gap: 4px; flex-wrap: wrap; }
+    .form span { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font-size: 0.7rem; font-weight: 700;
+                 background: var(--panel-3); color: var(--muted); }
+    .form span.W { background: var(--accent-soft); color: var(--accent); }
+    .form span.L { background: rgba(255, 107, 107, 0.12); color: var(--danger); }
+    .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 14px; }
+    .note { color: var(--muted); font-size: 0.78rem; line-height: 1.55; }
+    .note b { color: var(--text); }
+
+    /* Info button + Elo guide */
+    .info-btn {
+      width: 20px; height: 20px; flex: none; border-radius: 50%; padding: 0; cursor: pointer;
+      border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent);
+      font: italic 700 0.72rem/1 Georgia, serif; display: inline-grid; place-items: center;
+    }
+    a.info-btn { text-decoration: none; }
+    .info-btn:hover { background: var(--accent); color: var(--accent-ink); }
+    .info-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+    .explain { font-size: 0.86rem; line-height: 1.6; }
+    .explain h3:first-child { margin-top: 0; }
+
+    /* Elo calculator */
+    .calc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+    .slider-row { margin-bottom: 14px; }
+    .slider-row .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; gap: 8px; }
+    .slider-row .top b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); background: transparent; padding: 0; border: 0; }
+    .seg { display: flex; background: var(--panel-3); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 3px; }
+    .seg button { flex: 1; border: 0; background: transparent; padding: 7px 6px; border-radius: 7px; cursor: pointer;
+                  color: var(--muted); font-weight: 600; font-size: 0.8rem; }
+    .seg button.on { background: var(--accent-soft); color: var(--accent); }
+    .stepper { display: flex; align-items: center; gap: 8px; }
+    .stepper button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-3);
+                      cursor: pointer; font-weight: 700; }
+    .stepper button:hover { border-color: var(--accent-line); color: var(--accent); }
+    .stepper b { min-width: 2ch; text-align: center; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+    .score-input { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: center; }
+    .score-input .stepper.r { justify-content: flex-end; }
+    .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .presets button { font-size: 0.75rem; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border);
+                      background: var(--panel-3); cursor: pointer; color: var(--muted); }
+    .presets button:hover { color: var(--accent); border-color: var(--accent-line); }
+    .steps { display: flex; flex-direction: column; gap: 8px; }
+    .step { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: start;
+            background: var(--panel-3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+    .step .n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 0.72rem;
+               font-weight: 700; background: var(--accent-soft); color: var(--accent); }
+    .step .what { font-size: 0.75rem; color: var(--muted); }
+    .step .math { font-family: ui-monospace, monospace; font-size: 0.82rem; overflow-wrap: anywhere; }
+    .step .math b { color: var(--accent); font-weight: 700; }
+    .after { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .after .result-box .value small { font-size: 0.8rem; margin-left: 6px; }
+    .hl td { background: var(--accent-soft) !important; color: var(--accent); }
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+
+    /* Match page */
+    .scoreboard { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; margin: 14px 0 6px; }
+    .scoreboard .team-name { font-size: 1.4rem; font-weight: 700; word-break: break-word; }
+    .scoreboard .team-name.away { text-align: right; }
+    .scoreboard .team-name.win { color: var(--accent); }
+    .scoreboard .big-score { font-size: 2.6rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.04em;
+                             text-shadow: 0 0 24px rgba(166, 255, 77, 0.25); }
+    .tag { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; letter-spacing: 0.04em; }
+    .tag.upset { background: rgba(255, 107, 107, 0.14); color: var(--danger); border: 1px solid rgba(255, 107, 107, 0.35); }
+    .tag.soft { background: var(--panel-3); color: var(--muted); border: 1px solid var(--border); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .goal { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .goal:last-child { border-bottom: 0; }
+    .goal .min { font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .goal .title { font-weight: 600; word-break: break-word; }
+    .goal .meta { color: var(--muted); font-size: 0.75rem; }
+    .goal .tag + .tag { margin-left: 4px; }
+    a.match, a.row { color: inherit; text-decoration: none; }
+    a.row:hover .title { color: var(--accent); }
+    a.match:hover .score-chip { background: var(--accent-soft); color: var(--accent); }
+    .explain h3 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent);
+                     margin: 20px 0 8px; }
+    .explain p { margin: 0 0 8px; color: #c9d3cc; }
+    .formula { font-family: ui-monospace, monospace; font-size: 0.82rem; background: var(--panel-3);
+               border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px;
+               padding: 10px 12px; margin: 8px 0 10px; overflow-x: auto; white-space: pre; color: var(--text); }
+    .explain table { font-size: 0.82rem; margin: 6px 0 10px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .explain td, .explain th { padding: 7px 10px; }
+    .explain ol { margin: 0 0 8px; padding-left: 20px; color: #c9d3cc; }
+    .explain li { margin-bottom: 4px; }
+    .explain code { font-family: ui-monospace, monospace; color: var(--accent); font-size: 0.82rem; }
+
+    /* Custom dropdowns (selects + team combobox) */
+    .dd { position: relative; min-width: 0; width: 100%; }
+    .dd.compact { width: auto; }
+    .dd.end { margin-left: auto; }
+    .dd-native { display: none !important; }
+    .dd-btn {
+      width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      background: var(--panel-3); border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px;
+      cursor: pointer; text-align: left; font-weight: 550;
+    }
+    .dd.compact .dd-btn { padding: 6px 10px; font-size: 0.8rem; }
+    .dd-btn:hover { border-color: var(--accent-line); }
+    .dd.open .dd-btn, .dd-btn:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .dd-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dd-chev { width: 14px; height: 14px; flex: none; color: var(--muted); transition: transform 0.15s ease; }
+    .dd.open .dd-chev { transform: rotate(180deg); color: var(--accent); }
+    .dd.combo input { padding-right: 34px; }
+    .dd.combo .dd-chev { position: absolute; right: 12px; top: 50%; margin-top: -7px; pointer-events: none; }
+    .dd-menu {
+      position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; min-width: 100%; max-height: 290px; overflow-y: auto;
+      background: rgba(20, 26, 22, 0.98); border: 1px solid var(--accent-line); border-radius: 12px; padding: 6px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 24px rgba(166, 255, 77, 0.06);
+      animation: dd-in 0.12s ease-out;
+    }
+    @keyframes dd-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .dd.compact .dd-menu, .dd.end .dd-menu { left: auto; right: 0; min-width: 190px; }
+    .dd-menu::-webkit-scrollbar { width: 8px; }
+    .dd-menu::-webkit-scrollbar-thumb { background: var(--panel-3); border-radius: 8px; }
+    .dd-head { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); padding: 6px 10px 4px; }
+    .dd-opt { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer;
+              color: var(--text); font-size: 0.85rem; min-width: 0; }
+    .dd-opt.active { background: var(--panel-3); }
+    .dd-opt[aria-selected="true"] { color: var(--accent); font-weight: 600; }
+    .dd-opt .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dd-opt .aside { margin-left: auto; color: var(--muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; padding-left: 8px; }
+    .dd-opt .tick { margin-left: auto; color: var(--accent); }
+    .dd-opt .badge { width: 24px; height: 24px; border-radius: 6px; font-size: 0.6rem; }
+    .dd-opt mark { background: none; color: var(--accent); font-weight: 700; }
+    .dd-empty { padding: 14px 10px; color: var(--muted); text-align: center; font-size: 0.82rem; }
+    .controls .dd.sel { flex: 0 1 200px; }
+
+    /* Mobile nav */
+    nav.tabbar { display: none; }
+
+    @media (max-width: 1100px) {
+      .grid.top { grid-template-columns: 1fr; }
+      .grid.bottom { grid-template-columns: 1fr 1fr; }
+      .sim-form { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 860px) {
+      .shell { grid-template-columns: 1fr; }
+      aside.sidebar { display: none; }
+      .content { padding: 14px 16px 90px; }
+      .grid.bottom, .two { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .chart { height: 200px; }
+      .pills .pill:nth-child(n+3) { display: none; }
+      nav.tabbar {
+        display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+        background: rgba(12, 16, 13, 0.96); border-top: 1px solid var(--border); padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+        backdrop-filter: blur(10px);
+      }
+      nav.tabbar a { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.65rem;
+                     color: var(--muted); text-decoration: none; padding: 4px 0; }
+      nav.tabbar a svg { width: 20px; height: 20px; }
+      nav.tabbar a.active { color: var(--accent); }
+      th, td { padding: 9px 8px; }
+      .hide-sm { display: none; }
+      .versus .name { font-size: 1.05rem; }
+      .calc { grid-template-columns: 1fr; }
+      .scoreboard .team-name { font-size: 1.05rem; }
+      .scoreboard .big-score { font-size: 2rem; }
+      .predicted .score { font-size: 1.8rem; }
+    }
+    @media (max-width: 420px) {
+      .fields, .sim-form { grid-template-columns: 1fr; }
+      .chip-version { display: none; }
+    }
+  </style>
+</head>
+<body>
+<!-- Icon sprites -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="i-boot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6l8-3z"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></symbol>
+  <symbol id="i-rank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-dice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-ball" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10l4-3zM12 7V3M16 10l4-1.5M14.5 14.5l2.5 3.5M9.5 14.5L7 18M8 10L4 8.5"/></symbol>
+</svg>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-mark"><svg style="color:var(--accent-ink)"><use href="#i-ball"/></svg></span>
+      <span>PITCH<b>IQ</b></span>
+    </div>
+    <nav class="menu" id="menu">
+      <a class="nav-item" href="#dashboard" data-view="dashboard"><svg><use href="#i-dash"/></svg>Dashboard</a>
+      <a class="nav-item" href="#simulator" data-view="simulator"><svg><use href="#i-bolt"/></svg>Match simulator</a>
+      <a class="nav-item" href="#rankings" data-view="rankings"><svg><use href="#i-rank"/></svg>Power rankings</a>
+      <a class="nav-item" href="#scorers" data-view="scorers"><svg><use href="#i-boot"/></svg>Top scorers</a>
+      <a class="nav-item" href="#teams" data-view="teams"><svg><use href="#i-shield"/></svg>Teams</a>
+      <a class="nav-item" href="#random" data-random><svg><use href="#i-dice"/></svg>Random match</a>
+      <a class="nav-item" href="#elo" data-view="elo"><svg><use href="#i-info"/></svg>How Elo works</a>
+    </nav>
+    <div class="promo">
+      <h3>Predict any matchup</h3>
+      <p>Elo ratings from 50,000+ internationals since 1872.</p>
+      <svg class="ball" style="color:var(--accent)"><use href="#i-ball"/></svg>
+      <a class="btn primary block" href="#simulator">Try the simulator</a>
+    </div>
+  </aside>
+
+  <div class="content">
+    <header class="topbar">
+      <div class="who">
+        <div class="avatar">IQ</div>
+        <div><h1 id="page-title">Dashboard</h1><small id="page-sub">International football analytics</small></div>
+      </div>
+      <div class="pills" id="pills"></div>
+      <div class="spacer"></div>
+      <span class="chip-version" id="version">data …</span>
+      <a class="btn" href="#random" data-random><svg width="16" height="16"><use href="#i-dice"/></svg>Random match</a>
+      <a class="btn primary" href="#simulator"><svg width="16" height="16"><use href="#i-bolt"/></svg>Simulate</a>
+    </header>
+
+    <div id="error" class="error" hidden></div>
+
+    <!-- ===== Dashboard ===== -->
+    <section id="view-dashboard" data-title="Dashboard" data-sub="International football analytics">
+      <div class="grid top">
+        <div class="card">
+          <div class="card-head">
+            <h2>Goals scored</h2>
+            <span class="sub" id="chart-sub"></span>
+            <select class="compact end" id="range" aria-label="Range">
+              <option value="all">All time</option>
+              <option value="1950">Since 1950</option>
+              <option value="2000" selected>Since 2000</option>
+              <option value="2016">Last 10 years</option>
+            </select>
+          </div>
+          <div class="big"><span class="value num" id="goals-total">–</span><span class="delta" id="goals-delta"></span></div>
+          <div class="chart" id="chart"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2>Quick simulator</h2><a class="info-btn" href="#elo" aria-label="How Elo ratings are calculated">i</a><a class="link end" href="#simulator">Full analysis →</a></div>
+          <div class="fields">
+            <label class="field">Team A<input id="qa" value="Brazil" autocomplete="off"></label>
+            <label class="field">Team B<input id="qb" value="Argentina" autocomplete="off"></label>
+          </div>
+          <label class="field" style="margin-bottom:12px">Venue
+            <select id="qv"><option value="neutral">Neutral ground</option><option value="a">Team A at home</option><option value="b">Team B at home</option></select>
+          </label>
+          <button class="btn primary block" id="q-run" type="button">Simulate</button>
+          <div class="result-boxes">
+            <div class="result-box" id="qbox-a"><div class="label" id="ql-a">Team A win</div><div class="value num" id="qp-a">–</div></div>
+            <div class="result-box" id="qbox-b"><div class="label" id="ql-b">Team B win</div><div class="value num" id="qp-b">–</div></div>
+          </div>
+          <p class="small muted center" id="q-extra" style="margin:10px 0 0"></p>
+        </div>
+      </div>
+
+      <div class="grid bottom">
+        <div class="card">
+          <div class="card-head"><h2>Latest results</h2><a class="btn end" style="padding:5px 10px;font-size:0.78rem" href="#random" data-random><svg width="14" height="14"><use href="#i-dice"/></svg>Random match</a></div>
+          <div class="list" id="dash-results"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Power rankings</h2><a class="info-btn" href="#elo" aria-label="How Elo ratings are calculated">i</a><span class="sub">Elo · 1y change</span><a class="link end" href="#rankings">All →</a></div>
+          <div class="list" id="dash-rankings"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>All-time top scorers</h2><a class="link end" href="#scorers">All →</a></div>
+          <div class="list" id="dash-scorers"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Simulator ===== -->
+    <section id="view-simulator" data-title="Match simulator" data-sub="Compare two teams and predict the result" hidden>
+      <div class="card" style="margin-bottom:14px">
+        <div class="sim-form">
+          <label class="field">Team A<input id="sa" value="England" autocomplete="off"></label>
+          <label class="field">Team B<input id="sb" value="France" autocomplete="off"></label>
+          <label class="field">Venue
+            <select id="sv"><option value="neutral">Neutral ground</option><option value="a">Team A at home</option><option value="b">Team B at home</option></select>
+          </label>
+          <button class="btn primary" id="s-run" type="button">Simulate</button>
+        </div>
+      </div>
+      <div id="sim-out" hidden>
+        <div class="card">
+          <div class="versus">
+            <div><div class="name" id="s-name-a"></div><div class="rank" id="s-rank-a"></div></div>
+            <div class="predicted"><div class="small muted">Predicted</div><div class="score num" id="s-score"></div><div class="small muted" id="s-xg"></div></div>
+            <div><div class="name b" id="s-name-b"></div><div class="rank right" id="s-rank-b"></div></div>
+          </div>
+          <div class="prob-bar"><span class="pa" id="s-bar-a"></span><span class="pd" id="s-bar-d"></span><span class="pb" id="s-bar-b"></span></div>
+          <div class="prob-legend"><span id="s-leg-a"></span><span id="s-leg-d"></span><span id="s-leg-b"></span></div>
+        </div>
+        <div class="two">
+          <div class="card">
+            <div class="card-head"><h2>Head-to-head comparison</h2><a class="info-btn" href="#elo" aria-label="How Elo ratings are calculated">i</a></div>
+            <div id="s-compare"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Recent form</h2><span class="sub">last 10, newest first</span></div>
+            <div class="row"><div class="grow"><div class="title" id="s-form-name-a"></div><div class="form" id="s-form-a"></div></div></div>
+            <div class="row"><div class="grow"><div class="title" id="s-form-name-b"></div><div class="form" id="s-form-b"></div></div></div>
+            <div class="card-head" style="margin:16px 0 4px"><h2>Previous meetings</h2><span class="sub" id="s-h2h-sum"></span></div>
+            <div id="s-meetings"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="card-head"><h2>How the prediction works</h2><a class="info-btn" href="#elo" aria-label="How Elo ratings are calculated">i</a></div>
+          <p class="note" id="s-note"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Rankings ===== -->
+    <section id="view-rankings" data-title="Power rankings" data-sub="Elo ratings of active national teams" hidden>
+      <div class="card-head">
+        <span class="muted small">Teams that played in the last 4 years, ranked by Elo rating.</span>
+        <a class="btn end" href="#elo"><span class="info-btn" aria-hidden="true">i</span>How Elo works</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th class="n">#</th><th>Team</th><th class="n">Elo</th><th class="n">1y change</th><th class="n hide-sm">Matches</th></tr></thead>
+          <tbody id="rank-rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Top scorers ===== -->
+    <section id="view-scorers" data-title="Top scorers" data-sub="Goals in internationals, own goals excluded" hidden>
+      <div class="controls">
+        <select id="era" aria-label="Era"></select>
+        <input id="q" type="search" placeholder="Search player…" aria-label="Search player" autocomplete="off">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th class="n">#</th><th>Player</th><th>Team</th><th class="n">Goals</th><th class="n">Pens</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <button id="more" class="btn block" style="margin-top:12px" type="button" hidden>Load more</button>
+      <p class="small muted" id="scorer-status" style="margin-top:10px"></p>
+    </section>
+
+    <!-- ===== Teams ===== -->
+    <section id="view-teams" data-title="Teams" data-sub="Records, scorers and results" hidden>
+      <div class="controls"><input id="team" placeholder="Choose a team, e.g. Brazil" aria-label="Team" autocomplete="off"></div>
+      <div id="team-body" hidden>
+        <p class="muted small" id="team-meta" style="margin:0 0 10px"></p>
+        <div class="chips" id="former"></div>
+        <div class="stats" id="stats"></div>
+        <div class="two" style="margin-top:0">
+          <div class="card">
+            <div class="card-head"><h2>Top scorers</h2></div>
+            <div class="list" id="team-scorers"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Recent matches</h2></div>
+            <div id="matches"></div>
+            <button id="more-matches" class="btn block" style="margin-top:10px" type="button" hidden>Load more</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== How Elo works ===== -->
+    <section id="view-elo" data-title="How Elo works" data-sub="Play with the formula behind every rating" hidden>
+      <div class="card">
+        <div class="card-head"><h2>Elo calculator</h2><span class="sub">change anything, every step updates live</span></div>
+        <div class="calc">
+          <div>
+            <div class="presets" id="presets">
+              <button type="button" data-preset="even">Even contest</button>
+              <button type="button" data-preset="fav">Favourite wins</button>
+              <button type="button" data-preset="upset">Shock upset</button>
+              <button type="button" data-preset="rout">Thrashing</button>
+              <button type="button" data-preset="real">Real teams: Spain vs Brazil</button>
+            </div>
+            <div class="fields">
+              <label class="field">Team A (optional)<input id="ea-team" placeholder="Any team…" autocomplete="off"></label>
+              <label class="field">Team B (optional)<input id="eb-team" placeholder="Any team…" autocomplete="off"></label>
+            </div>
+            <div class="slider-row">
+              <div class="top"><span class="muted small" id="ea-label">Team A rating</span><b id="ea-val">1800</b></div>
+              <input type="range" id="ea" min="800" max="2400" step="5" value="1800" aria-label="Team A rating">
+            </div>
+            <div class="slider-row">
+              <div class="top"><span class="muted small" id="eb-label">Team B rating</span><b id="eb-val">1700</b></div>
+              <input type="range" id="eb" min="800" max="2400" step="5" value="1700" aria-label="Team B rating">
+            </div>
+            <label class="field" style="margin-bottom:12px">Venue
+              <div class="seg" id="e-venue">
+                <button type="button" data-v="neutral" class="on">Neutral</button>
+                <button type="button" data-v="a">A at home</button>
+                <button type="button" data-v="b">B at home</button>
+              </div>
+            </label>
+            <label class="field" style="margin-bottom:12px">Match type (K)
+              <select id="e-k">
+                <option value="60">FIFA World Cup · K 60</option>
+                <option value="50">Continental final · K 50</option>
+                <option value="40" selected>Qualifier / Nations League · K 40</option>
+                <option value="30">Other tournament · K 30</option>
+                <option value="20">Friendly · K 20</option>
+              </select>
+            </label>
+            <label class="field">Final score
+              <div class="score-input">
+                <div class="stepper"><button type="button" data-step="a,-1" aria-label="Team A minus one">−</button><b id="e-ga">2</b><button type="button" data-step="a,1" aria-label="Team A plus one">+</button></div>
+                <span class="muted">–</span>
+                <div class="stepper r"><button type="button" data-step="b,-1" aria-label="Team B minus one">−</button><b id="e-gb">1</b><button type="button" data-step="b,1" aria-label="Team B plus one">+</button></div>
+              </div>
+            </label>
+          </div>
+          <div>
+            <div class="steps" id="e-steps"></div>
+            <div class="after">
+              <div class="result-box" id="e-after-a"><div class="label" id="e-after-a-label">Team A after</div><div class="value num" id="e-after-a-val"></div></div>
+              <div class="result-box" id="e-after-b"><div class="label" id="e-after-b-label">Team B after</div><div class="value num" id="e-after-b-val"></div></div>
+            </div>
+            <div style="margin-top:14px">
+              <div class="small muted">What actually happened in past matches with this rating gap</div>
+              <div class="prob-bar"><span class="pa" id="e-pa"></span><span class="pd" id="e-pd"></span><span class="pb" id="e-pb"></span></div>
+              <div class="prob-legend"><span id="e-la"></span><span id="e-ld"></span><span id="e-lb"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two">
+        <div class="card">
+          <div class="card-head"><h2>Theory vs reality</h2><span class="sub">hover the dots</span></div>
+          <div class="chart" id="e-chart" style="height:280px"></div>
+          <div class="legend">
+            <span><i style="background:var(--accent)"></i>Elo expected score</span>
+            <span><i style="background:#d7e4da"></i>Actual average score in real matches</span>
+            <span><i style="background:transparent;border:1px dashed var(--accent)"></i>Your matchup</span>
+          </div>
+          <p class="note" style="margin-top:10px">Each dot groups every match since 1950 by its pre-match rating gap (50-point buckets) and scores it like Elo
+            does: 1 per win, ½ per draw. When the dots sit on the line, Elo's formula matches reality.</p>
+        </div>
+        <div class="card explain">
+          <h3>The idea</h3>
+          <p>Every team starts at <b>1500</b>. We replay all 50,000+ internationals since 1872 in date order. After each match the
+             winner takes points from the loser. Beating a stronger team earns many; beating a much weaker one earns only a few.
+             Points are never created: what one side gains, the other loses. This follows the World Football Elo method (eloratings.net).</p>
+          <h3>Match weight · K</h3>
+          <table><tbody id="e-ktable">
+            <tr data-k="60"><td>FIFA World Cup</td><td class="n">60</td></tr>
+            <tr data-k="50"><td>Continental finals (Euro, Copa América, AFCON…)</td><td class="n">50</td></tr>
+            <tr data-k="40"><td>Qualifiers and Nations League</td><td class="n">40</td></tr>
+            <tr data-k="30"><td>Other tournaments</td><td class="n">30</td></tr>
+            <tr data-k="20"><td>Friendlies</td><td class="n">20</td></tr>
+          </tbody></table>
+          <h3>Margin of victory · G</h3>
+          <table><tbody id="e-gtable">
+            <tr data-g="1"><td>Draw or win by 1</td><td class="n">× 1</td></tr>
+            <tr data-g="2"><td>Win by 2</td><td class="n">× 1.5</td></tr>
+            <tr data-g="3"><td>Win by N ≥ 3</td><td class="n">× (11 + N) / 8</td></tr>
+          </tbody></table>
+          <h3>Penalty shootouts</h3>
+          <p>Count as a draw for rating purposes.</p>
+        </div>
+      </div>
+
+      <div class="two">
+        <div class="card explain">
+          <h3>From ratings to win / draw / loss odds</h3>
+          <p>Elo gives one expected score, not separate draw odds. So the simulator looks up the real outcome frequencies of past
+             matches with a similar gap (the bar above). It widens the window until there are at least 200 matches. The predicted score is the most
+             likely scoreline for that outcome, using each side's recent goals scored and conceded (Poisson model).</p>
+        </div>
+        <div class="card explain">
+          <h3>How accurate is it?</h3>
+          <p id="e-backtest">Fitted on 1950–2009 matches, tested on 2010 onwards.</p>
+          <h3>Limitations</h3>
+          <p>Ratings only see results: not injuries, squads, managers or how long ago a team last played. Teams with few matches
+             (for example non-FIFA sides) have less reliable ratings.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Match detail ===== -->
+    <section id="view-match" data-title="Match" data-sub="A match from the archive" hidden>
+      <div class="card">
+        <div class="small muted" id="m-meta"></div>
+        <div class="scoreboard">
+          <div class="team-name" id="m-home"></div>
+          <div class="big-score" id="m-score"></div>
+          <div class="team-name away" id="m-away"></div>
+        </div>
+        <div id="m-tags" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center"></div>
+        <div class="actions">
+          <a class="btn primary" href="#random" data-random><svg width="16" height="16"><use href="#i-dice"/></svg>Another random match</a>
+          <button class="btn" type="button" id="m-sim">Simulate this matchup today</button>
+        </div>
+      </div>
+      <div class="two">
+        <div class="card">
+          <div class="card-head"><h2>Going in</h2><a class="info-btn" href="#elo" aria-label="How Elo ratings are calculated">i</a><span class="sub">Elo before kick-off</span></div>
+          <div class="versus" style="margin-bottom:8px">
+            <div><div class="name" style="font-size:1rem" id="m-elo-home-name"></div><div class="rank" id="m-elo-home"></div></div>
+            <div class="muted small">vs</div>
+            <div><div class="name b" style="font-size:1rem" id="m-elo-away-name"></div><div class="rank right" id="m-elo-away"></div></div>
+          </div>
+          <div class="prob-bar"><span class="pa" id="m-pa"></span><span class="pd" id="m-pd"></span><span class="pb" id="m-pb"></span></div>
+          <div class="prob-legend"><span id="m-la"></span><span id="m-ld"></span><span id="m-lb"></span></div>
+          <p class="note" id="m-elo-note" style="margin-top:12px"></p>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Goals</h2></div>
+          <div id="m-goals"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-head"><h2>Head-to-head so far</h2><span class="sub" id="m-h2h-sub"></span></div>
+        <div class="stats" id="m-h2h"></div>
+        <p class="small muted" id="m-h2h-all" style="margin:0 0 10px"></p>
+        <div class="two" style="margin-top:0">
+          <div>
+            <div class="small muted" style="margin-bottom:4px">Previous meetings</div>
+            <div id="m-prev"></div>
+          </div>
+          <div>
+            <div class="small muted" style="margin-bottom:4px">Next meeting</div>
+            <div id="m-next"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<nav class="tabbar" id="tabbar">
+  <a href="#dashboard" data-view="dashboard"><svg><use href="#i-dash"/></svg>Home</a>
+  <a href="#simulator" data-view="simulator"><svg><use href="#i-bolt"/></svg>Simulate</a>
+  <a href="#rankings" data-view="rankings"><svg><use href="#i-rank"/></svg>Rankings</a>
+  <a href="#scorers" data-view="scorers"><svg><use href="#i-boot"/></svg>Scorers</a>
+  <a href="#teams" data-view="teams"><svg><use href="#i-shield"/></svg>Teams</a>
+</nav>
+
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const fmt = new Intl.NumberFormat("en");
+  const pct = (p) => `${Math.round(p * 100)}%`;
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const state = { teams: new Set(), overview: null, offset: 0, matchOffset: 0, team: null, loaded: {} };
+
+  function el(tag, props = {}, children = []) {
+    const node = Object.assign(document.createElement(tag), props);
+    for (const c of [].concat(children)) if (c !== null && c !== undefined) node.append(c);
+    return node;
+  }
+  function svg(tag, attrs = {}) {
+    const node = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    return node;
+  }
+  function initials(name) {
+    const words = name.replace(/[^\p{L}\s]/gu, "").split(/\s+/).filter(Boolean);
+    return (words.length > 1 ? words[0][0] + words[1][0] : (words[0] || "?").slice(0, 3)).toUpperCase();
+  }
+  function showError(msg) { $("error").textContent = msg || ""; $("error").hidden = !msg; }
+
+  async function getJson(url) {
+    const res = await fetch(url);
+    if (res.status === 429) {
+      throw new Error(`Too many requests. Try again in ${res.headers.get("Retry-After") || "a few"} seconds.`);
+    }
+    const body = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((body && (body.error || body.detail)) || `Request failed (${res.status})`);
+    return { res, body };
+  }
+
+  // ---------- Routing ----------
+  const VIEWS = ["dashboard", "simulator", "rankings", "scorers", "teams", "elo", "match"];
+  const loaders = {
+    dashboard: loadDashboard, simulator: () => runSim(), rankings: loadRankings,
+    scorers: () => loadEras().then(() => loadScorers()), teams: () => loadTeam(state.team || "Brazil"),
+    elo: initElo,
+  };
+  function route() {
+    const [name, param] = location.hash.slice(1).split("/");
+    if (name === "random") { goRandom(); return; }
+    const view = VIEWS.includes(name) ? name : "dashboard";
+    for (const v of VIEWS) $(`view-${v}`).hidden = v !== view;
+    for (const a of document.querySelectorAll("[data-view]")) a.classList.toggle("active", a.dataset.view === view);
+    const section = $(`view-${view}`);
+    $("page-title").textContent = section.dataset.title;
+    $("page-sub").textContent = section.dataset.sub;
+    showError("");
+    if (view === "match") loadMatch(param);
+    else if (!state.loaded[view]) { state.loaded[view] = true; loaders[view](); }
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener("hashchange", route);
+
+  async function goRandom() {
+    try {
+      const { body } = await getJson("/api/matches/random");
+      location.hash = `#match/${body.id}`;
+    } catch (e) { showError(e.message); }
+  }
+  document.addEventListener("click", (ev) => {
+    if (ev.target.closest("[data-random]")) { ev.preventDefault(); goRandom(); }
+  });
+
+  // ---------- Shared data ----------
+  async function loadOverview() {
+    const { body } = await getJson("/api/overview");
+    state.overview = body;
+    $("version").textContent = `data ${body.data_version}`;
+    const pill = (label, value) => el("div", { className: "pill" }, [
+      el("span", { className: "label", textContent: label }), el("span", { className: "value num", textContent: value })]);
+    $("pills").replaceChildren(
+      pill("Matches", fmt.format(body.matches)), pill("Goals", fmt.format(body.goals)),
+      pill("Teams", fmt.format(body.teams)), pill("Tournaments", fmt.format(body.tournaments)));
+  }
+  async function loadTeams() {
+    const { body } = await getJson("/api/teams");
+    state.teams = new Set(body.teams);
+  }
+
+  // ---------- Dashboard ----------
+  async function loadDashboard() {
+    try {
+      drawChart();
+      const [results, rankings, scorers] = await Promise.all([
+        getJson("/api/matches?limit=6"), getJson("/api/rankings?limit=6"), getJson("/api/scorers?era=all&limit=6"),
+      ]);
+      $("dash-results").replaceChildren(...results.body.items.map((m) => el("a", { className: "row", href: `#match/${m.id}` }, [
+        el("div", { className: "grow" }, [
+          el("div", { className: "title", textContent: `${m.home_team} vs ${m.away_team}` }),
+          el("div", { className: "meta", textContent: `${m.date} · ${m.tournament}` }),
+        ]),
+        el("span", { className: "score-chip num", textContent: `${m.home_score}–${m.away_score}` }),
+      ])));
+      $("dash-rankings").replaceChildren(...rankings.body.items.map((r) => el("div", { className: "row" }, [
+        el("span", { className: "badge" + (r.rank <= 3 ? " hot" : ""), textContent: initials(r.team) }),
+        el("div", { className: "grow" }, [
+          el("div", { className: "title", textContent: r.team }),
+          el("div", { className: "meta", textContent: `#${r.rank} · ${r.matches} matches` }),
+        ]),
+        el("div", { className: "right" }, [
+          el("div", { className: "num", style: "font-weight:650", textContent: fmt.format(Math.round(r.rating)) }),
+          changeEl(r.change_1y),
+        ]),
+      ])));
+      $("dash-scorers").replaceChildren(...scorers.body.items.map((p) => el("div", { className: "row" }, [
+        el("span", { className: "badge" + (p.rank <= 3 ? " hot" : ""), textContent: p.rank }),
+        el("div", { className: "grow" }, [
+          el("div", { className: "title", textContent: p.player }),
+          el("div", { className: "meta", textContent: p.team }),
+        ]),
+        el("span", { className: "num", style: "color:var(--accent);font-weight:700", textContent: p.goals }),
+      ])));
+      quickSim();
+    } catch (e) { showError(e.message); }
+  }
+  function changeEl(change) {
+    if (change === null || change === undefined) return el("div", { className: "meta", textContent: "new" });
+    const up = change >= 0;
+    return el("div", { className: "small num " + (up ? "up" : "down"), textContent: `${up ? "▲" : "▼"} ${Math.abs(change).toFixed(0)}` });
+  }
+
+  function drawChart() {
+    const o = state.overview;
+    if (!o) return;
+    const from = $("range").value === "all" ? 0 : Number($("range").value);
+    const pts = o.goals_by_year.filter((d) => d.year >= from);
+    const goals = pts.reduce((s, d) => s + d.goals, 0);
+    const matches = pts.reduce((s, d) => s + d.matches, 0);
+    $("goals-total").textContent = fmt.format(goals);
+    $("goals-delta").textContent = `${(goals / Math.max(matches, 1)).toFixed(2)} per match`;
+    $("chart-sub").textContent = `${fmt.format(matches)} matches · ${pts[0].year}–${pts[pts.length - 1].year}`;
+
+    const box = $("chart");
+    const W = Math.max(box.clientWidth, 280), H = box.clientHeight;
+    const pad = { l: 34, r: 8, t: 12, b: 22 };
+    const maxY = Math.max(...pts.map((d) => d.goals)) * 1.1;
+    const x = (i) => pad.l + (i / Math.max(pts.length - 1, 1)) * (W - pad.l - pad.r);
+    const y = (v) => pad.t + (1 - v / maxY) * (H - pad.t - pad.b);
+
+    const s = svg("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none" });
+    const defs = svg("defs");
+    const grad = svg("linearGradient", { id: "g-area", x1: 0, y1: 0, x2: 0, y2: 1 });
+    grad.append(svg("stop", { offset: "0%", "stop-color": "#a6ff4d", "stop-opacity": 0.35 }),
+                svg("stop", { offset: "100%", "stop-color": "#a6ff4d", "stop-opacity": 0 }));
+    const glow = svg("filter", { id: "g-glow", x: "-20%", y: "-20%", width: "140%", height: "140%" });
+    glow.append(svg("feGaussianBlur", { stdDeviation: 3, result: "b" }));
+    const merge = svg("feMerge");
+    merge.append(svg("feMergeNode", { in: "b" }), svg("feMergeNode", { in: "SourceGraphic" }));
+    glow.append(merge);
+    defs.append(grad, glow);
+    s.append(defs);
+
+    for (let i = 0; i <= 4; i++) {
+      const v = (maxY / 4) * i;
+      s.append(svg("line", { x1: pad.l, x2: W - pad.r, y1: y(v), y2: y(v), class: "gridline" }));
+      const t = svg("text", { x: pad.l - 6, y: y(v) + 3, "text-anchor": "end", class: "axis" });
+      t.textContent = v >= 1000 ? `${Math.round(v / 1000)}k` : Math.round(v);
+      s.append(t);
+    }
+    const step = Math.ceil(pts.length / (W < 500 ? 4 : 8));
+    pts.forEach((d, i) => {
+      if (i % step === 0 || i === pts.length - 1) {
+        const t = svg("text", { x: x(i), y: H - 4, "text-anchor": "middle", class: "axis" });
+        t.textContent = d.year;
+        s.append(t);
+      }
+    });
+
+    // Smooth line (Catmull-Rom to Bezier)
+    const P = pts.map((d, i) => [x(i), y(d.goals)]);
+    let line = `M${P[0][0]},${P[0][1]}`;
+    for (let i = 0; i < P.length - 1; i++) {
+      const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
+      line += ` C${p1[0] + (p2[0] - p0[0]) / 6},${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6},${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]},${p2[1]}`;
+    }
+    s.append(svg("path", { d: `${line} L${P[P.length - 1][0]},${y(0)} L${P[0][0]},${y(0)} Z`, fill: "url(#g-area)" }));
+    s.append(svg("path", { d: line, fill: "none", stroke: "#a6ff4d", "stroke-width": 2, filter: "url(#g-glow)" }));
+
+    const cross = svg("line", { y1: pad.t, y2: y(0), stroke: "#a6ff4d", "stroke-opacity": 0.4, "stroke-dasharray": "3 3", visibility: "hidden" });
+    const dot = svg("circle", { r: 5, fill: "#0f1411", stroke: "#a6ff4d", "stroke-width": 2.5, visibility: "hidden" });
+    s.append(cross, dot);
+    const tip = el("div", { className: "tooltip", hidden: true });
+    box.replaceChildren(s, tip);
+
+    function show(i) {
+      const [px, py] = P[i];
+      for (const n of [cross, dot]) n.setAttribute("visibility", "visible");
+      cross.setAttribute("x1", px); cross.setAttribute("x2", px);
+      dot.setAttribute("cx", px); dot.setAttribute("cy", py);
+      tip.hidden = false;
+      tip.replaceChildren(el("b", { textContent: fmt.format(pts[i].goals) }), ` goals · ${pts[i].year} · ${pts[i].matches} matches`);
+      tip.style.left = `${Math.min(Math.max(px, 90), W - 90)}px`;
+      tip.style.top = `${py}px`;
+    }
+    s.addEventListener("pointermove", (ev) => {
+      const r = s.getBoundingClientRect();
+      const rel = ((ev.clientX - r.left) / r.width) * W;
+      show(Math.max(0, Math.min(pts.length - 1, Math.round(((rel - pad.l) / (W - pad.l - pad.r)) * (pts.length - 1)))));
+    });
+    s.addEventListener("pointerleave", () => show(pts.length - 1));
+    show(pts.length - 1);
+  }
+  $("range").addEventListener("change", drawChart);
+  let resizeTimer;
+  window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawChart, 150); });
+
+  async function simulate(a, b, venue) {
+    for (const t of [a, b]) if (!state.teams.has(t)) throw new Error(`Unknown team: ${t || "(empty)"}`);
+    const q = new URLSearchParams({ team_a: a, team_b: b, venue });
+    return (await getJson(`/api/simulate?${q}`)).body;
+  }
+  async function quickSim() {
+    showError("");
+    try {
+      const d = await simulate($("qa").value.trim(), $("qb").value.trim(), $("qv").value);
+      const p = d.prediction;
+      $("ql-a").textContent = `${d.team_a.team} win`;
+      $("ql-b").textContent = `${d.team_b.team} win`;
+      $("qp-a").textContent = pct(p.p_a_win);
+      $("qp-b").textContent = pct(p.p_b_win);
+      $("qbox-a").classList.toggle("win", p.outcome === "a");
+      $("qbox-b").classList.toggle("win", p.outcome === "b");
+      $("q-extra").textContent = `Draw ${pct(p.p_draw)} · likely score ${p.likely_score[0]}–${p.likely_score[1]}`;
+    } catch (e) { showError(e.message); }
+  }
+  $("q-run").addEventListener("click", quickSim);
+
+  // ---------- Simulator ----------
+  async function runSim() {
+    showError("");
+    try {
+      const d = await simulate($("sa").value.trim(), $("sb").value.trim(), $("sv").value);
+      renderSim(d);
+    } catch (e) { showError(e.message); }
+  }
+  $("s-run").addEventListener("click", runSim);
+
+  function renderSim(d) {
+    const A = d.team_a, B = d.team_b, p = d.prediction, h = d.head_to_head;
+    $("sim-out").hidden = false;
+    $("s-name-a").textContent = A.team;
+    $("s-name-b").textContent = B.team;
+    $("s-rank-a").textContent = `Elo ${Math.round(A.rating)}${A.rank ? ` · #${A.rank}` : ""}`;
+    $("s-rank-b").textContent = `Elo ${Math.round(B.rating)}${B.rank ? ` · #${B.rank}` : ""}`;
+    $("s-score").textContent = `${p.likely_score[0]} – ${p.likely_score[1]}`;
+    $("s-xg").textContent = `xG ${p.expected_goals[0]} – ${p.expected_goals[1]}`;
+    $("s-bar-a").style.width = pct(p.p_a_win);
+    $("s-bar-d").style.width = pct(p.p_draw);
+    $("s-bar-b").style.width = pct(p.p_b_win);
+    const leg = (label, v) => [label + " ", el("b", { textContent: pct(v) })];
+    $("s-leg-a").replaceChildren(...leg(A.team, p.p_a_win));
+    $("s-leg-d").replaceChildren(...leg("Draw", p.p_draw));
+    $("s-leg-b").replaceChildren(...leg(B.team, p.p_b_win));
+
+    const winRate = (r) => (r.played ? r.won / r.played : 0);
+    const metrics = [
+      ["Elo rating", A.rating, B.rating, (v) => Math.round(v), true],
+      ["Points per game (last 10)", A.form.points_per_game, B.form.points_per_game, (v) => v.toFixed(2), true],
+      ["Goals scored / game (last 20)", A.scoring.goals_for_per_game, B.scoring.goals_for_per_game, (v) => v.toFixed(2), true],
+      ["Goals conceded / game (last 20)", A.scoring.goals_against_per_game, B.scoring.goals_against_per_game, (v) => v.toFixed(2), false],
+      ["All-time win rate", winRate(A.record), winRate(B.record), pct, true],
+      ["Head-to-head wins", h.a_wins, h.b_wins, (v) => v, true],
+    ];
+    $("s-compare").replaceChildren(...metrics.map(([label, a, b, f, higherIsBetter]) => {
+      const aLead = a !== b && (a > b) === higherIsBetter, bLead = a !== b && !aLead;
+      const max = Math.max(Math.abs(a), Math.abs(b)) || 1;
+      return el("div", { className: "compare-row" }, [
+        el("div", { className: "v num" + (aLead ? " lead" : ""), textContent: f(a) }),
+        el("div", { className: "mid" }, [
+          el("div", { className: "label", textContent: label }),
+          el("div", { className: "dual" }, [
+            el("div", { className: "l" }, el("i", { className: aLead ? "lead" : "", style: `width:${(Math.abs(a) / max) * 100}%` })),
+            el("div", { className: "r" }, el("i", { className: bLead ? "lead" : "", style: `width:${(Math.abs(b) / max) * 100}%` })),
+          ]),
+        ]),
+        el("div", { className: "v b num" + (bLead ? " lead" : ""), textContent: f(b) }),
+      ]);
+    }));
+
+    const formChips = (results) => results.map((r) => el("span", { className: r, textContent: r }));
+    $("s-form-name-a").textContent = A.team;
+    $("s-form-name-b").textContent = B.team;
+    $("s-form-a").replaceChildren(...formChips(A.form.results));
+    $("s-form-b").replaceChildren(...formChips(B.form.results));
+    $("s-h2h-sum").textContent = h.played
+      ? `${h.played} played · ${A.team} ${h.a_wins} · draws ${h.draws} · ${B.team} ${h.b_wins}` : "never met";
+    $("s-meetings").replaceChildren(...(h.recent.length ? h.recent.map(matchRow)
+      : [el("div", { className: "empty", textContent: "No previous meetings." })]));
+
+    const bt = d.model_backtest;
+    $("s-note").replaceChildren(
+      el("b", { textContent: "Elo ratings. " }),
+      "Every international since 1872 is replayed in date order. A team gains points for beating stronger sides and loses them against weaker ones, weighted by tournament importance (World Cup 60 … friendly 20) and margin of victory. Home teams get a +100 bonus. ",
+      el("b", { textContent: "Win / draw / loss odds. " }),
+      `The rating gap here is ${p.rating_gap > 0 ? "+" : ""}${p.rating_gap}. The odds are the actual outcome frequencies of ${fmt.format(p.calibration_samples)} historical matches with a similar gap. `,
+      el("b", { textContent: "Likely score. " }),
+      "The most probable scoreline for the predicted outcome, using each side's recent goals scored and the opponent's goals conceded (Poisson model). ",
+      el("b", { textContent: "Track record. " }),
+      bt.matches ? `Fitted on 1950–2009 and tested on ${fmt.format(bt.matches)} matches since 2010, it picked the right outcome ${pct(bt.accuracy)} of the time (always picking the home team: ${pct(bt.baseline_accuracy)}).` : "",
+    );
+  }
+
+  function matchRow(m) {
+    const homeWin = m.home_score > m.away_score || m.shootout_winner === m.home_team;
+    const awayWin = m.away_score > m.home_score || m.shootout_winner === m.away_team;
+    const pens = m.shootout_winner ? ` · ${m.shootout_winner} won on pens` : "";
+    return el("a", { className: "match", href: `#match/${m.id}` }, [
+      el("div", { className: "side" + (homeWin ? " win" : ""), textContent: m.home_team }),
+      el("span", { className: "score-chip num", textContent: `${m.home_score} – ${m.away_score}` }),
+      el("div", { className: "side away" + (awayWin ? " win" : ""), textContent: m.away_team }),
+      el("div", { className: "info", textContent: `${m.date} · ${m.tournament} · ${m.city}, ${m.country}${pens}` }),
+    ]);
+  }
+
+  // ---------- Rankings ----------
+  async function loadRankings() {
+    try {
+      const { body } = await getJson("/api/rankings?limit=400");
+      $("rank-rows").replaceChildren(...body.items.map((r) => el("tr", { className: r.rank <= 3 ? "top" : "" }, [
+        el("td", { className: "n rank", textContent: r.rank }),
+        el("td", { className: "player", textContent: r.team }),
+        el("td", { className: "n goals", textContent: Math.round(r.rating) }),
+        el("td", { className: "n" }, changeEl(r.change_1y)),
+        el("td", { className: "n hide-sm", textContent: r.matches }),
+      ])));
+    } catch (e) { showError(e.message); }
+  }
+
+  // ---------- Top scorers ----------
+  const PAGE = 50;
+  async function loadEras() {
+    if ($("era").options.length) return;
+    let eras = ["all", "1950-1999", "2000-2026"];
+    try { eras = (await getJson("/api/eras")).body.eras; } catch (_) { /* fallback */ }
+    $("era").replaceChildren(...eras.map((e) => el("option", { value: e, textContent: e === "all" ? "All time" : e })));
+  }
+  function renderScorers(items, append) {
+    const tbody = $("rows");
+    if (!append) tbody.replaceChildren();
+    if (!append && !items.length) {
+      tbody.append(el("tr", {}, el("td", { colSpan: 5, className: "empty", textContent: "No players found." })));
+      return;
+    }
+    for (const it of items) {
+      tbody.append(el("tr", { className: it.rank <= 3 ? "top" : "" }, [
+        el("td", { className: "n rank", textContent: it.rank }),
+        el("td", { className: "player", textContent: it.player }),
+        el("td", { className: "team", textContent: it.team }),
+        el("td", { className: "n goals", textContent: it.goals }),
+        el("td", { className: "n", textContent: it.penalties }),
+      ]));
+    }
+  }
+  function scorerStatus(res, body) {
+    const cache = res.headers.get("X-Cache");
+    $("scorer-status").textContent = `${cache ? `X-Cache: ${cache} · ` : ""}data_version: ${body.data_version}`;
+  }
+  async function loadScorers(append = false) {
+    showError("");
+    if (!append) state.offset = 0;
+    try {
+      const { res, body } = await getJson(`/api/scorers?era=${encodeURIComponent($("era").value)}&limit=${PAGE}&offset=${state.offset}`);
+      renderScorers(body.items, append);
+      scorerStatus(res, body);
+      state.offset += body.items.length;
+      $("more").hidden = body.items.length < PAGE;
+    } catch (e) { showError(e.message); }
+  }
+  let searchTimer;
+  $("q").addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    const q = $("q").value.trim();
+    searchTimer = setTimeout(async () => {
+      if (q.length < 2) return loadScorers();
+      showError("");
+      try {
+        const { res, body } = await getJson(`/api/players/search?q=${encodeURIComponent(q)}&limit=10`);
+        renderScorers(body.items, false);
+        scorerStatus(res, body);
+        $("more").hidden = true;
+      } catch (e) { showError(e.message); }
+    }, 300);
+  });
+  $("era").addEventListener("change", () => { $("q").value = ""; loadScorers(); });
+  $("more").addEventListener("click", () => loadScorers(true));
+
+  // ---------- Teams ----------
+  function stat(label, value, accent = false) {
+    return el("div", { className: "stat" + (accent ? " accent" : "") }, [
+      el("div", { className: "label", textContent: label }), el("div", { className: "value", textContent: value })]);
+  }
+  async function loadTeam(team) {
+    showError("");
+    state.team = team;
+    state.matchOffset = 0;
+    $("team").value = team;
+    try {
+      const { body } = await getJson(`/api/teams/stats?team=${encodeURIComponent(team)}`);
+      const r = body.record;
+      $("team-meta").textContent = r.played ? `${fmt.format(r.played)} matches · ${r.first_match} to ${r.last_match}` : "No matches recorded.";
+      $("former").replaceChildren(...body.former_names.map((f) =>
+        el("span", { className: "chip", textContent: `Known as ${f.name} (${f.start_date.slice(0, 4)}–${f.end_date.slice(0, 4)})` })));
+      $("stats").replaceChildren(
+        stat("Won", r.won, true), stat("Drawn", r.drawn), stat("Lost", r.lost),
+        stat("Win rate", r.played ? pct(r.won / r.played) : "–", true),
+        stat("Goals for", fmt.format(r.goals_for)), stat("Goals against", fmt.format(r.goals_against)),
+        stat("Shootouts won", r.shootouts_won), stat("Shootouts lost", r.shootouts_lost));
+      $("team-scorers").replaceChildren(...(body.top_scorers.length ? body.top_scorers.map((p, i) => el("div", { className: "row" }, [
+        el("span", { className: "badge" + (i < 3 ? " hot" : ""), textContent: i + 1 }),
+        el("div", { className: "grow" }, el("div", { className: "title", textContent: p.player })),
+        el("span", { className: "num", style: "color:var(--accent);font-weight:700", textContent: p.goals }),
+      ])) : [el("div", { className: "empty", textContent: "No scorer data." })]));
+      $("team-body").hidden = false;
+      await loadMatches(false);
+    } catch (e) { showError(e.message); }
+  }
+  async function loadMatches(append) {
+    try {
+      const { body } = await getJson(`/api/matches?team=${encodeURIComponent(state.team)}&limit=20&offset=${state.matchOffset}`);
+      if (!append) $("matches").replaceChildren();
+      $("matches").append(...body.items.map(matchRow));
+      state.matchOffset += body.items.length;
+      $("more-matches").hidden = body.items.length < 20;
+    } catch (e) { showError(e.message); }
+  }
+  $("team").addEventListener("change", () => {
+    const t = $("team").value.trim();
+    if (state.teams.has(t)) loadTeam(t);
+    else if (t) showError(`Unknown team: ${t}`);
+  });
+  $("more-matches").addEventListener("click", () => loadMatches(true));
+
+  // ---------- How Elo works ----------
+  const E = { venue: "neutral", ga: 2, gb: 1, model: null };
+  const K_NAMES = { 60: "World Cup", 50: "continental final", 40: "qualifier", 30: "other tournament", 20: "friendly" };
+  const expectedScore = (gap) => 1 / (Math.pow(10, -gap / 400) + 1);
+  const goalMult = (diff) => { const n = Math.abs(diff); return n <= 1 ? 1 : n === 2 ? 1.5 : (11 + n) / 8; };
+  const signed = (v, digits = 1) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(digits)}`;
+  const trim = (v, digits = 3) => String(Number(v.toFixed(digits)));
+
+  // Same lookup as app/elo.py `probabilities`: widen the bucket window until enough samples.
+  function calibratedOdds(gap) {
+    const m = E.model, W = m.bucket_width;
+    const cal = new Map(m.calibration.map((c) => [c.gap, c]));
+    const center = Math.round(Math.max(-m.max_gap, Math.min(m.max_gap, gap)) / W) * W;
+    let t = [0, 0, 0];
+    for (let r = 0; r <= (2 * m.max_gap) / W; r++) {
+      for (const off of r === 0 ? [0] : [-r, r]) {
+        const c = cal.get(center + off * W);
+        if (c) t = [t[0] + c.wins, t[1] + c.draws, t[2] + c.losses];
+      }
+      if (t[0] + t[1] + t[2] >= m.min_bucket_samples) break;
+    }
+    const n = t[0] + t[1] + t[2] || 1;
+    return { w: t[0] / n, d: t[1] / n, l: t[2] / n, n };
+  }
+
+  async function initElo() {
+    try {
+      await loadEloModel();
+      const bt = E.model.backtest;
+      if (bt && bt.matches) {
+        $("e-backtest").textContent = `Win/draw/loss odds were fitted only on 1950–2009 matches, then tested on ${fmt.format(bt.matches)} ` +
+          `matches since 2010. They picked the right outcome ${pct(bt.accuracy)} of the time; always picking the home team manages ${pct(bt.baseline_accuracy)}.`;
+      }
+      renderElo();
+    } catch (e) { showError(e.message); }
+  }
+
+  function eloName(side) {
+    const t = $(`e${side}-team`).value.trim();
+    return E.model && t in E.model.ratings ? t : side === "a" ? "Team A" : "Team B";
+  }
+
+  function step(n, what, math) {
+    return el("div", { className: "step" }, [
+      el("span", { className: "n", textContent: n }),
+      el("div", {}, [el("div", { className: "what", textContent: what }), el("div", { className: "math" }, math)]),
+    ]);
+  }
+
+  function renderElo() {
+    if (!E.model) return;
+    const ra = Number($("ea").value), rb = Number($("eb").value);
+    const nameA = eloName("a"), nameB = eloName("b");
+    const bonus = { neutral: 0, a: 100, b: -100 }[E.venue];
+    const gap = ra - rb + bonus;
+    const we = expectedScore(gap);
+    const W = E.ga > E.gb ? 1 : E.ga < E.gb ? 0 : 0.5;
+    const K = Number($("e-k").value);
+    const G = goalMult(E.ga - E.gb);
+    const change = K * G * (W - we);
+    const margin = Math.abs(E.ga - E.gb);
+
+    $("ea-val").textContent = ra; $("eb-val").textContent = rb;
+    $("ea-label").textContent = `${nameA} rating`; $("eb-label").textContent = `${nameB} rating`;
+    $("e-ga").textContent = E.ga; $("e-gb").textContent = E.gb;
+    for (const b of $("e-venue").children) b.classList.toggle("on", b.dataset.v === E.venue);
+
+    const bonusText = bonus > 0 ? " + 100 (home)" : bonus < 0 ? " − 100 (away)" : "";
+    const resultWord = W === 1 ? `${nameA} won` : W === 0 ? `${nameA} lost` : "draw";
+    $("e-steps").replaceChildren(
+      step(1, "Rating gap (dr) from A's side", [`${ra} − ${rb}${bonusText} = `, el("b", { textContent: gap })]),
+      step(2, `Expected score for ${nameA} (We)`, [`1 / (10^(${-gap}/400) + 1) = `, el("b", { textContent: we.toFixed(3) }),
+        el("div", { className: "what", textContent: `${nameA} is expected to take ${pct(we)} of the points` })]),
+      step(3, "Actual result (W)", [`${E.ga}–${E.gb}, ${resultWord}, so W = `, el("b", { textContent: W })]),
+      step(4, "Weights", ["K = ", el("b", { textContent: K }), ` (${K_NAMES[K]}),  G = `, el("b", { textContent: trim(G) }),
+        ` (${margin <= 1 ? "margin ≤ 1" : `won by ${margin}`})`]),
+      step(5, "Rating change = K × G × (W − We)", [`${K} × ${trim(G)} × (${W} − ${we.toFixed(3)}) = `, el("b", { textContent: signed(change) })]),
+    );
+    const after = (label, before, delta, box) => {
+      $(`${box}-label`).textContent = `${label} after`;
+      $(`${box}-val`).replaceChildren(`${(before + delta).toFixed(1)}`,
+        el("small", { className: delta >= 0 ? "up" : "down", textContent: signed(delta) }));
+      $(box).classList.toggle("win", delta > 0.05);
+    };
+    after(nameA, ra, change, "e-after-a");
+    after(nameB, rb, -change, "e-after-b");
+
+    const o = calibratedOdds(gap);
+    $("e-pa").style.width = pct(o.w); $("e-pd").style.width = pct(o.d); $("e-pb").style.width = pct(o.l);
+    $("e-la").replaceChildren(`${nameA} won `, el("b", { textContent: pct(o.w) }));
+    $("e-ld").replaceChildren("Draw ", el("b", { textContent: pct(o.d) }));
+    $("e-lb").replaceChildren(`${nameB} won `, el("b", { textContent: pct(o.l) }), ` · ${fmt.format(o.n)} matches`);
+
+    for (const tr of $("e-ktable").children) tr.classList.toggle("hl", Number(tr.dataset.k) === K);
+    const gRow = margin <= 1 ? 1 : margin === 2 ? 2 : 3;
+    for (const tr of $("e-gtable").children) tr.classList.toggle("hl", Number(tr.dataset.g) === gRow);
+    drawEloChart(gap);
+  }
+
+  function drawEloChart(gap) {
+    const box = $("e-chart"), m = E.model;
+    const W = Math.max(box.clientWidth, 280), H = box.clientHeight;
+    const pad = { l: 34, r: 10, t: 10, b: 24 };
+    const span = m.max_gap;
+    const x = (g) => pad.l + ((g + span) / (2 * span)) * (W - pad.l - pad.r);
+    const y = (v) => pad.t + (1 - v) * (H - pad.t - pad.b);
+    const s = svg("svg", { viewBox: `0 0 ${W} ${H}` });
+    for (const v of [0, 0.25, 0.5, 0.75, 1]) {
+      s.append(svg("line", { x1: pad.l, x2: W - pad.r, y1: y(v), y2: y(v), class: "gridline" }));
+      const t = svg("text", { x: pad.l - 6, y: y(v) + 3, "text-anchor": "end", class: "axis" });
+      t.textContent = v; s.append(t);
+    }
+    for (const g of [-600, -300, 0, 300, 600]) {
+      const t = svg("text", { x: x(g), y: H - 6, "text-anchor": "middle", class: "axis" });
+      t.textContent = g > 0 ? `+${g}` : g; s.append(t);
+    }
+    let d = "";
+    for (let g = -span; g <= span; g += 10) d += `${d ? "L" : "M"}${x(g)},${y(expectedScore(g))}`;
+    s.append(svg("path", { d, fill: "none", stroke: "#a6ff4d", "stroke-width": 2.5 }));
+
+    const dots = m.calibration.filter((c) => c.wins + c.draws + c.losses >= 50).map((c) => {
+      const n = c.wins + c.draws + c.losses;
+      return { gap: c.gap, n, actual: (c.wins + 0.5 * c.draws) / n };
+    });
+    for (const p of dots) s.append(svg("circle", { cx: x(p.gap), cy: y(p.actual), r: 3.5, fill: "#d7e4da", "fill-opacity": 0.85 }));
+
+    const g = Math.max(-span, Math.min(span, gap));
+    s.append(svg("line", { x1: x(g), x2: x(g), y1: pad.t, y2: y(0), stroke: "#a6ff4d", "stroke-dasharray": "4 4", "stroke-opacity": 0.7 }));
+    s.append(svg("circle", { cx: x(g), cy: y(expectedScore(g)), r: 6, fill: "#0f1411", stroke: "#a6ff4d", "stroke-width": 2.5 }));
+
+    const tip = el("div", { className: "tooltip", hidden: true });
+    box.replaceChildren(s, tip);
+    s.addEventListener("pointermove", (ev) => {
+      const r = s.getBoundingClientRect();
+      const gx = (((ev.clientX - r.left) / r.width) * W - pad.l) / (W - pad.l - pad.r) * 2 * span - span;
+      const p = dots.reduce((best, q) => (Math.abs(q.gap - gx) < Math.abs(best.gap - gx) ? q : best), dots[0]);
+      tip.hidden = false;
+      tip.replaceChildren(`gap ${p.gap > 0 ? "+" : ""}${p.gap}: actual `, el("b", { textContent: p.actual.toFixed(2) }),
+        ` vs Elo ${expectedScore(p.gap).toFixed(2)} · ${fmt.format(p.n)} matches`);
+      tip.style.left = `${Math.min(Math.max(x(p.gap), 140), W - 140)}px`;
+      tip.style.top = `${y(p.actual)}px`;
+    });
+    s.addEventListener("pointerleave", () => { tip.hidden = true; });
+  }
+
+  function setEloTeam(side, team) {
+    $(`e${side}-team`).value = team;
+    if (E.model && team in E.model.ratings) $(`e${side}`).value = Math.round(E.model.ratings[team] / 5) * 5;
+  }
+  const PRESETS = {
+    even: { a: 1800, b: 1800, venue: "neutral", k: 40, ga: 1, gb: 1 },
+    fav: { a: 2000, b: 1700, venue: "a", k: 40, ga: 2, gb: 0 },
+    upset: { a: 1600, b: 2050, venue: "neutral", k: 60, ga: 1, gb: 0 },
+    rout: { a: 1900, b: 1300, venue: "a", k: 40, ga: 7, gb: 0 },
+    real: { teams: ["Spain", "Brazil"], venue: "neutral", k: 60, ga: 1, gb: 1 },
+  };
+  $("presets").addEventListener("click", (ev) => {
+    const btn = ev.target.closest("[data-preset]");
+    if (!btn) return;
+    const p = PRESETS[btn.dataset.preset];
+    $("ea-team").value = ""; $("eb-team").value = "";
+    if (p.teams) { setEloTeam("a", p.teams[0]); setEloTeam("b", p.teams[1]); }
+    else { $("ea").value = p.a; $("eb").value = p.b; }
+    E.venue = p.venue; E.ga = p.ga; E.gb = p.gb; $("e-k").value = p.k;
+    renderElo();
+  });
+  for (const side of ["a", "b"]) {
+    $(`e${side}`).addEventListener("input", () => { $(`e${side}-team`).value = ""; renderElo(); });
+    $(`e${side}-team`).addEventListener("change", () => {
+      const t = $(`e${side}-team`).value.trim();
+      if (E.model && t in E.model.ratings) setEloTeam(side, t);
+      else if (t) showError(`Unknown team: ${t}`);
+      renderElo();
+    });
+  }
+  $("e-venue").addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-v]");
+    if (b) { E.venue = b.dataset.v; renderElo(); }
+  });
+  $("e-k").addEventListener("change", renderElo);
+  document.querySelector(".score-input").addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-step]");
+    if (!b) return;
+    const [side, delta] = b.dataset.step.split(",");
+    const key = side === "a" ? "ga" : "gb";
+    E[key] = Math.max(0, Math.min(15, E[key] + Number(delta)));
+    renderElo();
+  });
+  window.addEventListener("resize", () => { if (!$("view-elo").hidden) renderElo(); });
+
+  // ---------- Match detail ----------
+  async function loadMatch(id) {
+    try {
+      const { body } = await getJson(`/api/matches/${encodeURIComponent(id || "")}`);
+      renderMatch(body);
+    } catch (e) { showError(e.message); }
+  }
+
+  function renderMatch(d) {
+    const m = d.match, e = d.elo, h = d.head_to_head;
+    const home = m.home_team, away = m.away_team;
+    $("page-sub").textContent = `${home} vs ${away}, ${m.date}`;
+    $("m-meta").textContent = `${m.date} · ${m.tournament} · ${m.city}, ${m.country}${m.neutral ? " · neutral venue" : ""}`;
+    const homeWin = m.home_score > m.away_score || m.shootout_winner === home;
+    const awayWin = m.away_score > m.home_score || m.shootout_winner === away;
+    $("m-home").textContent = home; $("m-home").classList.toggle("win", homeWin);
+    $("m-away").textContent = away; $("m-away").classList.toggle("win", awayWin);
+    $("m-score").textContent = `${m.home_score} – ${m.away_score}`;
+
+    const tags = [];
+    if (e.upset) {
+      const winner = m.home_score > m.away_score ? home : away;
+      tags.push(el("span", { className: "tag upset", textContent: `UPSET · ${winner} had a ${pct(e.result_probability)} chance` }));
+    }
+    if (m.shootout_winner) tags.push(el("span", { className: "tag soft", textContent: `${m.shootout_winner} won on penalties` }));
+    if (!h.before.played) tags.push(el("span", { className: "tag soft", textContent: "First ever meeting" }));
+    $("m-tags").replaceChildren(...tags);
+
+    $("m-elo-home-name").textContent = home; $("m-elo-away-name").textContent = away;
+    $("m-elo-home").textContent = `Elo ${Math.round(e.home_before)}`;
+    $("m-elo-away").textContent = `Elo ${Math.round(e.away_before)}`;
+    $("m-pa").style.width = pct(e.p_home); $("m-pd").style.width = pct(e.p_draw); $("m-pb").style.width = pct(e.p_away);
+    $("m-la").replaceChildren(`${home} `, el("b", { textContent: pct(e.p_home) }));
+    $("m-ld").replaceChildren("Draw ", el("b", { textContent: pct(e.p_draw) }));
+    $("m-lb").replaceChildren(`${away} `, el("b", { textContent: pct(e.p_away) }));
+    $("m-elo-note").replaceChildren(
+      `Rating gap ${e.gap > 0 ? "+" : ""}${e.gap}${m.neutral ? "" : " (incl. +100 home advantage)"}. Elo expected ${home} to take `,
+      el("b", { textContent: pct(e.expected_home) }), " of the points. After the final whistle: ",
+      el("b", { className: e.home_change >= 0 ? "up" : "down", textContent: `${home} ${signed(e.home_change)}` }), ", ",
+      el("b", { className: e.home_change <= 0 ? "up" : "down", textContent: `${away} ${signed(-e.home_change)}` }), ".");
+
+    $("m-goals").replaceChildren(...(d.goals.length ? d.goals.map((g) => el("div", { className: "goal" }, [
+      el("span", { className: "min", textContent: g.minute !== null ? `${g.minute}'` : "–" }),
+      el("div", { style: "min-width:0" }, [
+        el("div", { className: "title", textContent: g.scorer }),
+        el("div", { className: "meta", textContent: g.team }),
+      ]),
+      el("span", {}, [g.penalty ? el("span", { className: "tag soft", textContent: "PEN" }) : null,
+                      g.own_goal ? el("span", { className: "tag upset", textContent: "OG" }) : null]),
+    ])) : [el("div", { className: "empty", textContent: "No goalscorer details recorded for this match." })]));
+
+    const b = h.before;
+    $("m-h2h-sub").textContent = "record before this match";
+    $("m-h2h").replaceChildren(
+      stat("Meetings", b.played), stat(`${home} wins`, b.a_wins, b.a_wins > b.b_wins),
+      stat("Draws", b.draws), stat(`${away} wins`, b.b_wins, b.b_wins > b.a_wins));
+    const all = h.all_time;
+    $("m-h2h-all").textContent = `Goals before this match: ${home} ${b.a_goals}, ${away} ${b.b_goals}. ` +
+      `All-time including later games: ${all.played} meetings · ${home} ${all.a_wins} wins · ${all.draws} draws · ${away} ${all.b_wins} wins.`;
+    $("m-prev").replaceChildren(...(h.previous.length ? h.previous.map(matchRow)
+      : [el("div", { className: "empty", textContent: "None. This was their first meeting." })]));
+    $("m-next").replaceChildren(h.next ? matchRow(h.next) : el("div", { className: "empty", textContent: "No later meeting in the data." }));
+    $("m-sim").onclick = () => {
+      $("sa").value = m.home_canonical; $("sb").value = m.away_canonical; $("sv").value = "neutral";
+      state.loaded.simulator = false;
+      location.hash = "#simulator";
+    };
+  }
+
+  // ---------- Custom dropdowns ----------
+  const norm = (t) => t.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  let openDropdown = null;
+  document.addEventListener("pointerdown", (ev) => {
+    if (openDropdown && !openDropdown.root.contains(ev.target)) openDropdown.close();
+  });
+  function chevron() {
+    const s = svg("svg", { viewBox: "0 0 24 24", class: "dd-chev", fill: "none", stroke: "currentColor", "stroke-width": 2.5, "stroke-linecap": "round", "stroke-linejoin": "round" });
+    s.append(svg("path", { d: "M6 9l6 6 6-6" }));
+    return s;
+  }
+
+  // Shared open/close + keyboard behaviour. `render` fills the menu and returns option nodes.
+  function dropdown(root, { render, choose, focusEl }) {
+    const menu = el("div", { className: "dd-menu", role: "listbox", hidden: true });
+    root.append(menu);
+    menu.addEventListener("pointerdown", (ev) => ev.preventDefault());  // keep focus on the control
+    let opts = [], active = 0;
+    const api = {
+      root,
+      get isOpen() { return !menu.hidden; },
+      open() {
+        if (openDropdown && openDropdown !== api) openDropdown.close();
+        opts = render(menu);
+        active = Math.max(0, opts.findIndex((o) => o.getAttribute("aria-selected") === "true"));
+        menu.hidden = false; root.classList.add("open"); focusEl.setAttribute("aria-expanded", "true");
+        openDropdown = api;
+        highlight();
+      },
+      refresh() { if (api.isOpen) { opts = render(menu); active = 0; highlight(); } },
+      close() {
+        menu.hidden = true; root.classList.remove("open"); focusEl.setAttribute("aria-expanded", "false");
+        if (openDropdown === api) openDropdown = null;
+      },
+    };
+    function highlight() {
+      opts.forEach((o, i) => o.classList.toggle("active", i === active));
+      if (opts[active]) opts[active].scrollIntoView({ block: "nearest" });
+    }
+    menu.addEventListener("click", (ev) => {
+      const o = ev.target.closest(".dd-opt");
+      if (o) { choose(o.dataset.value); api.close(); }
+    });
+    menu.addEventListener("pointermove", (ev) => {
+      const i = opts.indexOf(ev.target.closest(".dd-opt"));
+      if (i >= 0 && i !== active) { active = i; opts.forEach((o, j) => o.classList.toggle("active", j === i)); }
+    });
+    focusEl.addEventListener("keydown", (ev) => {
+      if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+        ev.preventDefault();
+        if (!api.isOpen) return api.open();
+        active = Math.max(0, Math.min(opts.length - 1, active + (ev.key === "ArrowDown" ? 1 : -1)));
+        highlight();
+      } else if (ev.key === "Enter" && api.isOpen && opts[active]) {
+        ev.preventDefault(); choose(opts[active].dataset.value); api.close();
+      } else if (ev.key === "Escape" || ev.key === "Tab") {
+        api.close();
+      }
+    });
+    return api;
+  }
+
+  function enhanceSelect(select) {
+    const root = el("div", { className: `dd sel ${select.className}`.trim() });
+    select.replaceWith(root);
+    select.classList.add("dd-native");
+    const label = el("span", { className: "dd-label" });
+    const btn = el("button", { type: "button", className: "dd-btn" }, [label, chevron()]);
+    btn.setAttribute("aria-haspopup", "listbox");
+    btn.setAttribute("aria-label", select.getAttribute("aria-label") || "");
+    root.append(select, btn);
+    const sync = () => { label.textContent = select.selectedOptions[0] ? select.selectedOptions[0].textContent : ""; };
+    // Keep the button label in step with programmatic `select.value = ...` and late-added options.
+    const desc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+    Object.defineProperty(select, "value", { get() { return desc.get.call(this); }, set(v) { desc.set.call(this, v); sync(); } });
+    new MutationObserver(sync).observe(select, { childList: true });
+    select.addEventListener("change", sync);
+    sync();
+    const dd = dropdown(root, {
+      focusEl: btn,
+      render(menu) {
+        const opts = [...select.options].map((o) => {
+          const node = el("div", { className: "dd-opt", role: "option" }, [
+            el("span", { className: "name", textContent: o.textContent }),
+            o.selected ? el("span", { className: "tick", textContent: "✓" }) : null,
+          ]);
+          node.dataset.value = o.value;
+          node.setAttribute("aria-selected", String(o.selected));
+          return node;
+        });
+        menu.replaceChildren(...opts);
+        return opts;
+      },
+      choose(value) {
+        select.value = value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        btn.focus();
+      },
+    });
+    btn.addEventListener("click", () => (dd.isOpen ? dd.close() : dd.open()));
+  }
+
+  let sortedTeams = null;
+  function teamsByRating() {
+    const r = (E.model && E.model.ratings) || {};
+    if (!sortedTeams || !sortedTeams.rated) {
+      sortedTeams = [...state.teams].sort((a, b) => (r[b] || 0) - (r[a] || 0) || a.localeCompare(b));
+      sortedTeams.rated = Boolean(E.model);
+    }
+    return sortedTeams;
+  }
+  function highlightMatch(name, q) {
+    const i = norm(name).indexOf(q);
+    if (!q || i < 0 || norm(name).length !== name.length) return [name];
+    return [name.slice(0, i), el("mark", { textContent: name.slice(i, i + q.length) }), name.slice(i + q.length)];
+  }
+
+  function enhanceTeamInput(input) {
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-autocomplete", "list");
+    const root = el("div", { className: "dd combo" });
+    input.replaceWith(root);
+    root.append(input, chevron());
+    const ratings = () => (E.model && E.model.ratings) || {};
+    const dd = dropdown(root, {
+      focusEl: input,
+      render(menu) {
+        const value = input.value.trim();
+        const exact = state.teams.has(value);
+        const q = exact ? "" : norm(value);
+        let list = teamsByRating();
+        if (q) {
+          list = list.filter((t) => norm(t).includes(q))
+                     .sort((a, b) => Number(!norm(a).startsWith(q)) - Number(!norm(b).startsWith(q)));
+        }
+        const opts = list.slice(0, 80).map((t) => {
+          const rating = ratings()[t];
+          const node = el("div", { className: "dd-opt", role: "option" }, [
+            el("span", { className: "badge", textContent: initials(t) }),
+            el("span", { className: "name" }, highlightMatch(t, q)),
+            rating ? el("span", { className: "aside", textContent: Math.round(rating) }) : null,
+          ]);
+          node.dataset.value = t;
+          node.setAttribute("aria-selected", String(t === value));
+          return node;
+        });
+        menu.replaceChildren(
+          el("div", { className: "dd-head", textContent: q ? `${list.length} match${list.length === 1 ? "" : "es"}` : "All teams · by Elo rating" }),
+          ...(opts.length ? opts : [el("div", { className: "dd-empty", textContent: "No team matches that name" })]));
+        return opts;
+      },
+      choose(team) {
+        input.value = team;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      },
+    });
+    input.addEventListener("focus", () => { input.select(); dd.open(); });
+    input.addEventListener("click", () => { if (!dd.isOpen) dd.open(); });
+    input.addEventListener("input", () => (dd.isOpen ? dd.refresh() : dd.open()));
+  }
+
+  document.querySelectorAll("select").forEach(enhanceSelect);
+  ["qa", "qb", "sa", "sb", "team", "ea-team", "eb-team"].forEach((id) => enhanceTeamInput($(id)));
+
+  // ---------- Boot ----------
+  async function loadEloModel() {
+    if (!E.model) E.model = (await getJson("/api/elo/model")).body;
+  }
+  Promise.all([loadOverview(), loadTeams(), loadEloModel()])
+    .catch((e) => showError(e.message))
+    .finally(route);
+</script>
+</body>
+</html>

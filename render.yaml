@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: pitchiq
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python scripts/build_top_scorers.py
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
